@@ -1,16 +1,4 @@
 # Export the module function if it exists
-<% if context.cluster =~ /kubernetes/ -%>
-exec &> >(tee -a "pod.log")
-
-source /etc/profile.d/lmod.sh
-
-source /bin/find_host_port
-source /bin/save_passwd_as_secret
-password="$PASSWORD"
-host="$HOST_CFG"
-port="$PORT_CFG"
-export SINGULARITY_HOME="$HOME"
-<% else -%>
 [[ $(type -t module) == "function" ]] && export -f module
 
 # Find available port to run server on
@@ -19,26 +7,7 @@ port=$(find_port ${host})
 # Define a password and export it for RStudio authentication
 password="$(create_passwd 16)"
 
-<% end -%>
 # rstudio 1.4+ needs a csrf token
 csrf_token=<%= SecureRandom.uuid %>
 
 export RSTUDIO_PASSWORD="${password}"
-
-<%- if context.include_tutorials == "1" -%>
-<%-
-    workshop_base = "/users/PZS0645/support/workshop/ParallelR/"
-    workshop_src = if /3.6.3/.match?(context.version)
-                      workshop_base + "3.6.3/"
-                   else
-                      workshop_base + "3.6.1/"
-                   end
--%>
-#
-# Create workshop/tutorial notebooks
-#
-# Copy over workshops/tutorials
-set -x
-rsync -avz "<%= workshop_src %>" "<%= session.staged_root %>/ParallelR/"
-{ set +x; } 2>/dev/null
-<%- end -%>

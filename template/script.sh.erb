@@ -1,60 +1,12 @@
 #!/usr/bin/env bash
-
-<%-
-  session_dir = session.staged_root
-  tutorial_dir = session.staged_root.join('ParallelR')
-
-  match = /^app_rstudio_server\/(.+)$|.+ R\/(.+)/.match(context.version)
-  r_version = match[1] unless match[1].nil?
-  r_version = match[2] unless match[2].nil?
-
-  module_dir = context.cluster == 'owens' ? '/usr' : '/apps'
-  all_modules = if r_version >= '4.2' && ['owens', 'pitzer'].include?(context.cluster)
-                  "gnu/11.2.0 mkl/2021.3.0 #{context.version}"
-                else
-                  context.version
-                end
-%>
-
 # Load the required environment
 setup_env () {
   module purge
-
-  module load xalt/latest project/ondemand
-  <%- if context.cluster !~ /kubernetes|ascend/ -%>
-  module load rstudio_launcher/centos7
-  <%- end -%>
-  module load <%= all_modules %>
-
-  <%- if context.include_tutorials == "1" %>
-  export R_LIBS_USER="<%= tutorial_dir %>/Rworkshop"
-  mkdir -p "<%= tutorial_dir %>/Rworkshop"
-  <%- end %>
+  module load r/"<%= context.pom_r_versions %>" rstudio-server/"<%= context.pom_rstudio_versions %>"
 }
+
 setup_env
-
-# if you're in a specialized version of RStudio (classes or tutorials)
-if [[ "$APPTAINER_HOME" != "$HOME" ]]; then
-
-  # prepare the host directories and files
-  mkdir -p "<%= tutorial_dir %>"
-  mkdir -p "$APPTAINER_HOME"
-  mv "<%= session_dir %>/bin" "<%= tutorial_dir %>"
-  mv "<%= session_dir %>/etc" "<%= tutorial_dir %>"
-  touch "$APPTAINER_HOME/0_${OSC_CLASS_ID:-osc_class}.md"
-
-  export WORKING_DIR="<%= tutorial_dir %>"
-
-  # Copy over classroom materials if the env variable exists
-  if [[ -n "$OSC_CLASS_FILES" ]]; then
-    set -x
-    rsync -avz --ignore-existing "$OSC_CLASS_FILES" "$APPTAINER_HOME"
-    { set +x; } 2>/dev/null
-  fi
-else
-  export WORKING_DIR="<%= session_dir %>"
-fi
-
+export WORKING_DIR="${PWD}"
 #
 # Start RStudio Server
 #
@@ -65,7 +17,7 @@ export RSTUDIO_AUTH="$WORKING_DIR/bin/auth"
 export RSESSION_WRAPPER_FILE="$WORKING_DIR/rsession.sh"
 (
 umask 077
-sed 's/^ \{2\}//' > "$WORKING_DIR/rsession.sh" << EOL
+sed 's/^ \{2\}//' > "${RSESSION_WRAPPER_FILE}" << EOL
   #!/usr/bin/env bash
 
   # Log all output from this script
@@ -76,12 +28,10 @@ sed 's/^ \{2\}//' > "$WORKING_DIR/rsession.sh" << EOL
 
   # rsession.sh doesn't share the same env as the outside script, so these
   # need to be set explicitly
-  export R_LIBS_SITE="${R_LIBS_SITE}"
-  export TZ="US/Eastern"
-  export HOME="$APPTAINER_HOME"
+  export TMPDIR="/tmp/$SLURM_JOB_USER/$SLURM_JOB_ID/"
+  export TZ="America/Los_Angeles"
   export MODULEPATH_ROOT="$MODULEPATH_ROOT"
   export MODULEPATH="$MODULEPATH"
-  export LMOD_PKG="$LMOD_PKG"
 
   env
 
@@ -91,6 +41,18 @@ sed 's/^ \{2\}//' > "$WORKING_DIR/rsession.sh" << EOL
 EOL
 )
 chmod 700 "$WORKING_DIR/rsession.sh"
+
+# generate a temporary database.conf file
+export RSTUDIO_DB_CONF_FILE="${PWD}/database.conf"
+(
+umask 077
+sed 's/^ \{2\}//' > "${RSTUDIO_DB_CONF_FILE}" << EOL
+  provider=sqlite
+  # Directory in which the sqlite database will be written
+  directory="/tmp/$SLURM_JOB_USER/$SLURM_JOB_ID/"
+EOL
+)
+chmod 744 "${RSTUDIO_DB_CONF_FILE}"
 
 # Set working directory to home directory
 cd "${HOME}"
@@ -103,43 +65,20 @@ hostname
 mkdir -p "$WORKING_DIR/logs"
 
 # use the system installed rserver
-export PATH="$PATH:/usr/lib/rstudio-server/bin"
+# export PATH="$PATH:/usr/lib/rstudio-server/bin"
 
 set -x
 # Launch the RStudio Server
 echo "Starting up rserver... at $(date)"
 
-<%- if context.cluster !~ /kubernetes/ -%>
-# --contain is used to override the bindpaths specified in OSC's
-# singularity.conf which would otherwise conflict in /etc
-# using --contain requires us to bind mount in addition directories including
-# /dev and /proc
-# optional_tutorial_home_bind is used when include_tutorials to change the home
-# directory to get a clean environment without clobbering files
-bwrap --dev-bind / / --tmpfs /tmp \
- --bind $WORKING_DIR/etc /etc/rstudio \
- --setenv LD_LIBRARY_PATH "$LD_LIBRARY_PATH" \
-  rserver \
- --www-port "${port}" \
- --auth-none 0 \
- --auth-pam-helper-path "${RSTUDIO_AUTH}" \
- --auth-encrypt-password 0 \
- --rsession-path "${RSESSION_WRAPPER_FILE}" \
- <%- if r_version > '4.1' -%>
- --server-data-dir='/tmp/run' \
- --server-user=$(whoami)
- <%- end -%>
-
-<%- else -%>
-cd ${APPTAINER_HOME:=$HOME}
 rserver \
-  --www-port 8080 \
+  --www-port "${port}" \
   --auth-none 0 \
   --auth-pam-helper-path "${RSTUDIO_AUTH}" \
   --auth-encrypt-password 0 \
   --rsession-path "${RSESSION_WRAPPER_FILE}" \
-  <%- if r_version > '4.1' -%>
-  --server-data-dir='/tmp/run' \
+  --rsession-which-r=$(which R) \
+  --database-config-file "${RSTUDIO_DB_CONF_FILE}" \
+  --server-data-dir "${TMPDIR}" \
+  --server-working-dir "${TMPDIR}" \
   --server-user=$(whoami)
-  <%- end -%>
-<%- end -%>
