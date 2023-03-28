@@ -3,7 +3,7 @@
   begin
     output, status = Open3.capture2e(cmd)
     if status.success?
-      rstudio_versions = output.split("\n").map(&:strip).reject(&:blank?).sort
+      rstudio_versions = output.split("\n").map(&:strip).reject(&:blank?).reverse
     else
       raise output
     end
@@ -17,7 +17,7 @@
   begin
     output, status = Open3.capture2e(cmd)
     if status.success?
-      r_versions = output.split("\n").map(&:strip).reject(&:blank?).sort
+      r_versions = output.split("\n").map(&:strip).reject(&:blank?).reverse
     else
       raise output
     end
