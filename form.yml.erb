@@ -36,6 +36,7 @@ form:
   - pom_num_hours
   - pom_rstudio_versions
   - pom_r_versions
+  - apptainer_location
   - pom_num_cores
   - pom_num_memories
   - bc_email_on_started
@@ -71,19 +72,26 @@ attributes:
     widget: select
     options:
     <%- rstudio_versions.each do |q| -%>
-      - [ "<%= q %>", "<%= q %>" ]
+      - [ "<%= q %>", "<%= q %>", data-hide-apptainer-location: true ]
     <%- end -%>
+      - [ "apptainer", "apptainer", data-hide-pom-r-versions: true ]
   pom_r_versions:
     label: "R Version"
-    required: true
     widget: select
     options:
     <%- r_versions.each do |q| -%>
-      - [ "<%= q %>", "<%= q %>" ]
+      - [ "<%= q %>", "<%= q %>"]
     <%- end -%>
+  apptainer_location:
+    widget: text_field
+    help: |
+      - example 
+      - $HOME/some_path/r.sif
+      - ~/some_path/r.sif
+      - /full_path/r.sif
   pom_num_cores:
-    widget: "number_field"
     label: "Number of CPU cores to request"
+    widget: "number_field"
     help: |
       CPU cores are in multiple of 2 to optimize performance
     value: 2

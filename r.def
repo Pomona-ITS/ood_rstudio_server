@@ -1,0 +1,37 @@
+Bootstrap: docker
+From: ubuntu:24.04
+
+%environment
+export LC_ALL=C.UTF-8
+export PATH=$PATH:/usr/lib/rstudio-server/bin/
+%post
+apt update
+
+#install R
+DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends lsb-release  software-properties-common dirmngr wget
+wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | tee -a /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc
+add-apt-repository -y "deb https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/"
+apt install -y r-base
+
+#install rserver
+## for newest version go to https://posit.co/download/rstudio-server/ and select Ubuntu 24
+apt install -y gdebi-core
+#for list
+wget https://download2.rstudio.org/server/jammy/amd64/rstudio-server-2024.09.0-375-amd64.deb
+gdebi -n rstudio-server-2024.09.0-375-amd64.deb
+rm -f rstudio-server-2024.09.0-375-amd64.deb
+
+#add more library for R here
+apt install -y \
+libcurl4-openssl-dev \
+libfontconfig-dev \
+libfribidi-dev \
+libgdal-dev \
+libharfbuzz-dev \
+libssl-dev \
+libudunits2-dev
+
+#r-cran package can be install with the command below, replace package with the package you want. Package may not be the newest version
+#to search go to https://packages.ubuntu.com/ and type in r-cran-package. Select Distribution: noble
+#uncomment the command below to use
+#apt install -y r-cran-package

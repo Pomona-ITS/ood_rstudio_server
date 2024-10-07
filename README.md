@@ -29,3 +29,13 @@ rpmdev-extract rstudio-server-rhel-$(echo $version | tr + -)-x86_64.rpm
 mkdir -p $HPC_SOFTWARE/$name/$version
 cp -Rv rstudio-server-$version-1.x86_64/usr/lib/rstudio-server/* $HPC_SOFTWARE/$name/$version
 ```
+
+## Apptainer usage
+Copy the `r.def` to your machine.
+```sh
+#load apptainer
+module load apptainer
+#build the apptainer
+#modify the r.def if you need specific library or a different OS
+apptainer build r.sif r.def
+```
