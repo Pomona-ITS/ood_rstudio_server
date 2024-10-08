@@ -6,7 +6,7 @@ setup_env () {
     module load apptainer
   else
     module load rstudio-server/"<%= context.pom_rstudio_versions %>"
-    module load r/"<%= context.pom_r_versions %>" 
+    module load r/"<%= context.pom_rversion %>" 
   fi
   
 }

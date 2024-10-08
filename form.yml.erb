@@ -35,7 +35,7 @@ form:
   - pom_partitions
   - pom_num_hours
   - pom_rstudio_versions
-  - pom_r_versions
+  - pom_rversion
   - apptainer_location
   - pom_num_cores
   - pom_num_memories
@@ -74,8 +74,8 @@ attributes:
     <%- rstudio_versions.each do |q| -%>
       - [ "<%= q %>", "<%= q %>", data-hide-apptainer-location: true ]
     <%- end -%>
-      - [ "apptainer", "apptainer", data-hide-pom-r-versions: true ]
-  pom_r_versions:
+      - [ "apptainer", "apptainer", data-hide-pom-rversion: true ]
+  pom_rversion:
     label: "R Version"
     widget: select
     options:

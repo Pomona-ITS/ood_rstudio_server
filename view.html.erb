@@ -5,7 +5,7 @@
   let expires = "expires=" + date.toUTCString();
   let cookiePath = "path=/rnode/" + "<%= host.to_s %>" + "/" + "<%= port.to_s %>/";
   /**
-    rstuido wants a cookie called csrf-token - but that's going to change in 2020!
+    rstudio wants a cookie called csrf-token - but that's going to change in 2020!
   */
   let cookie = `csrf-token=<%= csrf_token %>;${expires};${cookiePath};SameSite=strict;secure`;
   document.cookie = cookie;
